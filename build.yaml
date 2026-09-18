@@ -1,0 +1,41 @@
+name: Build CharlieChaos EXE
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout files
+        uses: actions/checkout@v6
+
+      - name: Install AutoHotkey
+        shell: powershell
+        run: |
+          choco install autohotkey -y
+
+      - name: Find Ahk2Exe
+        shell: powershell
+        run: |
+          $compiler = Get-ChildItem "C:\Program Files\AutoHotkey" -Recurse -Filter Ahk2Exe.exe | Select-Object -First 1
+          if (!$compiler) {
+            throw "Ahk2Exe.exe not found"
+          }
+
+          echo "AHK_COMPILER=$($compiler.FullName)" >> $env:GITHUB_ENV
+
+      - name: Compile
+        shell: powershell
+        run: |
+          & "$env:AHK_COMPILER" `
+            /in "CharlieChaos.ahk" `
+            /out "CharlieChaos.exe" `
+            /icon "CharlieKirk.ico"
+
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: CharlieChaos
+          path: CharlieChaos.exe
