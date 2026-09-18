@@ -20,7 +20,7 @@ jobs:
         shell: powershell
         run: |
           Invoke-WebRequest `
-            "https://github.com/AutoHotkey/Ahk2Exe/releases/latest/download/Ahk2Exe.zip" `
+            "https://github.com/AutoHotkey/Ahk2Exe/archive/refs/heads/master.zip" `
             -OutFile "$env:TEMP\Ahk2Exe.zip"
 
           Expand-Archive `
@@ -28,7 +28,7 @@ jobs:
             "$env:TEMP\Ahk2Exe" `
             -Force
 
-      - name: Find compiler and base
+      - name: Find compiler
         shell: powershell
         run: |
           $compiler = Get-ChildItem `
@@ -38,6 +38,8 @@ jobs:
             Select-Object -First 1
 
           if (!$compiler) {
+            Write-Host "Files found:"
+            Get-ChildItem "$env:TEMP\Ahk2Exe" -Recurse
             throw "Ahk2Exe.exe not found"
           }
 
