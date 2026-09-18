@@ -9,30 +9,63 @@ jobs:
 
     steps:
       - name: Checkout files
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
-      - name: Install AutoHotkey
+      - name: Install AutoHotkey v2
         shell: powershell
         run: |
           choco install autohotkey -y
 
-      - name: Find Ahk2Exe
+      - name: Download Ahk2Exe
         shell: powershell
         run: |
-          $compiler = Get-ChildItem "C:\Program Files\AutoHotkey" -Recurse -Filter Ahk2Exe.exe | Select-Object -First 1
+          Invoke-WebRequest `
+            "https://github.com/AutoHotkey/Ahk2Exe/releases/latest/download/Ahk2Exe.zip" `
+            -OutFile "$env:TEMP\Ahk2Exe.zip"
+
+          Expand-Archive `
+            "$env:TEMP\Ahk2Exe.zip" `
+            "$env:TEMP\Ahk2Exe" `
+            -Force
+
+      - name: Find compiler and base
+        shell: powershell
+        run: |
+          $compiler = Get-ChildItem `
+            "$env:TEMP\Ahk2Exe" `
+            -Recurse `
+            -Filter "Ahk2Exe.exe" |
+            Select-Object -First 1
+
           if (!$compiler) {
             throw "Ahk2Exe.exe not found"
           }
 
+          $base = Get-ChildItem `
+            "C:\Program Files\AutoHotkey" `
+            -Recurse `
+            -Filter "AutoHotkey64.exe" |
+            Select-Object -First 1
+
+          if (!$base) {
+            throw "AutoHotkey64.exe not found"
+          }
+
           echo "AHK_COMPILER=$($compiler.FullName)" >> $env:GITHUB_ENV
+          echo "AHK_BASE=$($base.FullName)" >> $env:GITHUB_ENV
 
       - name: Compile
         shell: powershell
         run: |
           & "$env:AHK_COMPILER" `
-            /in "CharlieChaos.ahk" `
-            /out "CharlieChaos.exe" `
-            /icon "CharlieKirk.ico"
+            /in "$env:GITHUB_WORKSPACE\CharlieChaos.ahk" `
+            /out "$env:GITHUB_WORKSPACE\CharlieChaos.exe" `
+            /icon "$env:GITHUB_WORKSPACE\CharlieKirk.ico" `
+            /base "$env:AHK_BASE"
+
+          if (!(Test-Path "$env:GITHUB_WORKSPACE\CharlieChaos.exe")) {
+            throw "CharlieChaos.exe was not created"
+          }
 
       - name: Upload EXE
         uses: actions/upload-artifact@v4
